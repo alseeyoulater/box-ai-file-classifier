@@ -29,7 +29,7 @@ async function identifyDocumentType(fileId) {
     });
 
     // Use AI to get the document type from the analysis
-    const documentType = aiResponse.data.document_classification; // AI identifies if it's an Invoice, SOW, NDA, etc.
+    const documentType = aiResponse.data.document_classification; // AI identifies if it's an Invoice, SOW, NDA, Patient Record, Fund Documents, etc.
 
     // Return the document type
     return documentType;
@@ -41,7 +41,7 @@ async function identifyDocumentType(fileId) {
 
 async function applyMetadataTemplate(fileId, fileType) {
   let templateKey;
-
+  
   // Based on the fileType identified by AI, choose the appropriate metadata template
   if (fileType === 'Invoice') {
     templateKey = 'invoice_template';
@@ -49,6 +49,10 @@ async function applyMetadataTemplate(fileId, fileType) {
     templateKey = 'sow_template';
   } else if (fileType === 'NDA') {
     templateKey = 'nda_template';
+  } else if (fileType === 'Patient Record') {
+    templateKey = 'patient_record_template'; // New template for Patient Records
+  } else if (fileType === 'Fund Documents') {
+    templateKey = 'fund_documents_template'; // New template for Fund Documents
   } else {
     templateKey = 'other_template';  // Fallback template for unidentified documents
   }
@@ -57,6 +61,27 @@ async function applyMetadataTemplate(fileId, fileType) {
     "invoice_template": { "InvoiceNumber": "12345", "Amount": "1000" },
     "sow_template": { "ProjectName": "New Project", "StartDate": "2024-10-16" },
     "nda_template": { "PartyName": "Company X", "AgreementDate": "2024-10-16" },
+    "patient_record_template": { 
+      "Patient Name": "John Doe", 
+      "Date of Birth": "1980-01-01", 
+      "Client ID": "98765", 
+      "Gender": "Male", 
+      "Insurance Name": "HealthCo", 
+      "Item Code": "A123", 
+      "Member Number": "M12345", 
+      "Authorization Number": 123456 
+    }, // Example metadata fields for Patient Record
+    "fund_documents_template": { 
+      "Company": "FundCorp", 
+      "Fund Name": "Global Equity Fund", 
+      "Ticker Symbol": "GEF", 
+      "Share Class": "Class A", 
+      "Fund Net Assets": 1000000000, 
+      "Portfolio Turnover Rate": 20, 
+      "Fund performance over 1 year": 10.5, 
+      "Fund performance over 5 years": 7.8, 
+      "Fund performance over 10 years": 9.2 
+    }, // Example metadata fields for Fund Documents
     "other_template": { "DocumentType": "Unknown" }
   };
 
@@ -70,3 +95,4 @@ async function applyMetadataTemplate(fileId, fileType) {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log('Server is running'));
+
