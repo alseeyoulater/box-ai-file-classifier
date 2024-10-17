@@ -1,0 +1,72 @@
+const express = require('express');
+const bodyParser = require('body-parser');
+const axios = require('axios');
+
+const app = express();
+app.use(bodyParser.json());
+
+app.post('/webhook', async (req, res) => {
+  const { trigger, source } = req.body;
+  if (trigger === 'FILE.UPLOADED') {
+    console.log(`File uploaded: ${source.id}`);
+
+    // Step 1: Use AI to classify the document type based on its content
+    const fileType = await identifyDocumentType(source.id);
+
+    // Step 2: Apply metadata template based on document type
+    await applyMetadataTemplate(source.id, fileType);
+  }
+  res.sendStatus(200);
+});
+
+async function identifyDocumentType(fileId) {
+  try {
+    // This API call sends the file content to Box AI for analysis
+    const aiResponse = await axios.post(`https://api.box.com/2.0/files/${fileId}/metadata/templates`, {
+      headers: {
+        Authorization: `Bearer YOUR_ACCESS_TOKEN`
+      }
+    });
+
+    // Use AI to get the document type from the analysis
+    const documentType = aiResponse.data.document_classification; // AI identifies if it's an Invoice, SOW, NDA, etc.
+
+    // Return the document type
+    return documentType;
+  } catch (error) {
+    console.error('Error identifying document type:', error);
+    return 'Other'; // Fallback in case AI doesn't identify it correctly
+  }
+}
+
+async function applyMetadataTemplate(fileId, fileType) {
+  let templateKey;
+
+  // Based on the fileType identified by AI, choose the appropriate metadata template
+  if (fileType === 'Invoice') {
+    templateKey = 'invoice_template';
+  } else if (fileType === 'SOW') {
+    templateKey = 'sow_template';
+  } else if (fileType === 'NDA') {
+    templateKey = 'nda_template';
+  } else {
+    templateKey = 'other_template';  // Fallback template for unidentified documents
+  }
+
+  const metadata = {
+    "invoice_template": { "InvoiceNumber": "12345", "Amount": "1000" },
+    "sow_template": { "ProjectName": "New Project", "StartDate": "2024-10-16" },
+    "nda_template": { "PartyName": "Company X", "AgreementDate": "2024-10-16" },
+    "other_template": { "DocumentType": "Unknown" }
+  };
+
+  // Apply the selected metadata template
+  await axios.post(`https://api.box.com/2.0/files/${fileId}/metadata/enterprise/${templateKey}`, 
+    metadata[templateKey], {
+      headers: { Authorization: `Bearer YOUR_ACCESS_TOKEN` }
+    }
+  );
+}
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log('Server is running'));
